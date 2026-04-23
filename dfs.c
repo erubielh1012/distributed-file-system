@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
         parse_packet(buffer, bytes_read, method, filename, &chunk, &size);
 
         // Check method of request
-        if (strcmp(buffer, "GET") == 0) {
+        if (strcmp(method, "GET") == 0) {
             // STEP 1: Check if filename is valid
             if (filename[0] == '\0') {
                 printf("Error: filename is NULL\n");
@@ -132,7 +132,8 @@ int main(int argc, char *argv[]) {
                 close(fd);
             }
         
-        } else if (strcmp(buffer, "PUT") == 0) {
+        } else if (strcmp(method, "PUT") == 0) {
+            printf("CHKPT 1\n");
             // STEP 1: Read filename from request
             if (filename[0] == '\0') {
                 printf("Error: filename is NULL\n");
@@ -149,6 +150,7 @@ int main(int argc, char *argv[]) {
                 send_error_message(client_socket, "Error: could not create file");
                 continue;
             }
+            printf("CHKPT 2: filename_with_chunk: %s\n", filename_with_chunk);
             // STEP 3: Start putting in the data from client
             int bytes_written = 0;
             ssize_t bytes_read = 0;
@@ -160,14 +162,15 @@ int main(int argc, char *argv[]) {
                 fwrite(buffer, 1, bytes_read, file);
                 bytes_written += bytes_read;
             }
+            printf("CHKPT 3: bytes_written: %d\n", bytes_written);
             fclose(file);
             printf("File %s uploaded successfully\n", filename);
-        } else if (strcmp(buffer, "LIST") == 0) {
+        } else if (strcmp(method, "LIST") == 0) {
             // STEP 1: Retreive a list of files stored on the server
             // STEP 2: Send the list of files to the client
         } else {
             // Send error message to client
-            printf("Unknown request: %s\n", buffer);
+            printf("Unknown request: %s\n", method);
             close(client_socket);
             continue;
         }
