@@ -37,6 +37,10 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    int optval = 1;
+    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, 
+            (const void *)&optval , sizeof(int));
+
     // Bind socket to port
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
