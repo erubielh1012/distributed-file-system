@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     }
 
     int server_active[NUM_SERVERS] = {0};
-    int chunks_downloaded[NUM_SERVERS] = {0};
+    int chunks_downloaded[NUM_CHUNKS] = {0};
     char server_name[256];
     char server_address[256];
     char server_port[256];
@@ -145,12 +145,19 @@ int main(int argc, char *argv[]) {
             memset(server_port, 0, sizeof(server_port));
             memset(server_address, 0, sizeof(server_address));
 
-            char *line = NULL;
+            char line[256];
 
-            fgets(line, sizeof(line), fd);
+            if (fgets(line, sizeof(line), fd) == NULL) {
+                fprintf(stderr, "Error: Could not read line from %s\n", SERVER_LIST);
+                exit(1);
+            }
             char temp[256];
-            sscanf(line, "server %s %s", server_name, temp);
+            sscanf(line, "server %%255s %%255s", server_name, temp);
             char *pos = strstr(temp, ":");
+            if (pos == NULL) {
+                fprintf(stderr, "Error: Could not find colon in line: %s\n", line);
+                exit(1);
+            }
             *pos = '\0';
             strncpy(server_address, temp, sizeof(server_address) - 1);
             server_address[sizeof(server_address) - 1] = '\0';
@@ -188,17 +195,40 @@ int main(int argc, char *argv[]) {
                 // STEP 6: Upload each pair to DFS server based on modular arithmetic (x = HASH(filename) % y)
                 servers_to_send_chunk(&server1, &server2, x, chunk_number);
                 // STEP 7: Upload the chunk to the servers
-                send_packet(server_active[server1], "PUT", filename, chunk_number, chunk_size);
-                char buffer[MAX_MESSAGE_SIZE];
-                int bytes_sent = 0;
-                while (bytes_sent < chunk_size) {
-                    ssize_t bytes_read = fread(buffer, 1, sizeof(buffer), file);
-                    if (bytes_read > 0) {
-                        send(server_active[server1], buffer, bytes_read, 0);
-                        bytes_sent += bytes_read;
-                    } else {
-                        break;
+                if (server_active[server1] != -1) {
+                    send_packet(server_active[server1], "PUT", filename, chunk_number, chunk_size);
+                    char buffer[MAX_MESSAGE_SIZE];
+                    int bytes_sent = 0;
+                    while (bytes_sent < chunk_size) {
+                        ssize_t bytes_read = fread(buffer, 1, sizeof(buffer), file);
+                        if (bytes_read > 0) {
+                            send(server_active[server1], buffer, bytes_read, 0);
+                            bytes_sent += bytes_read;
+                        } else {
+                            break;
+                        }
                     }
+                } else {
+                    fprintf(stderr, "Error: Server %s is not available\n", server_name);
+                    exit(1);
+                }
+                // may have to send a done message to the server
+                if (server_active[server2] != -1) {
+                    send_packet(server_active[server2], "PUT", filename, chunk_number, chunk_size);
+                    char buffer[MAX_MESSAGE_SIZE];
+                    int bytes_sent = 0;
+                    while (bytes_sent < chunk_size) {
+                        ssize_t bytes_read = fread(buffer, 1, sizeof(buffer), file);
+                        if (bytes_read > 0) {
+                            send(server_active[server2], buffer, bytes_read, 0);
+                            bytes_sent += bytes_read;
+                        } else {
+                            break;
+                        }
+                    }
+                } else {
+                    fprintf(stderr, "Error: Server %s is not available\n", server_name);
+                    exit(1);
                 }
                 chunk_number++;
             }
