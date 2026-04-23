@@ -183,8 +183,8 @@ int main(int argc, char *argv[]) {
                 exit(1);
             }
             size_t file_size = st.st_size;
-            int div = file_size / NUM_CHUNKS;
-            int chunk_size = (int)ceil(div);
+            double div = file_size / NUM_CHUNKS;
+            int chunk_size = ceil(div);
             int chunk_number = 0;
             printf("Filename: %s, File size: %zu, Chunk size: %d\n", filename, file_size, chunk_size);
             FILE *file = fopen(filename, "rb");
