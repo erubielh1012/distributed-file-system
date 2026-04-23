@@ -14,10 +14,10 @@ dfs: dfs.c
 	gcc -Wall -Wextra $(OPENSSL_INC) -o dfs dfs.c $(OPENSSL_LIB) -lssl -lcrypto
 
 run_dfs: all
-	./dfs ./dfs1 10001 &
-	./dfs ./dfs2 10002 &
-	./dfs ./dfs3 10003 &
-	./dfs ./dfs4 10004 &
+	./dfs ./dfs1 10001 & \
+	./dfs ./dfs2 10002 & \
+	./dfs ./dfs3 10003 & \
+	./dfs ./dfs4 10004 & \
 	wait
 
 directories:
