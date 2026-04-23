@@ -1,0 +1,6 @@
+The crew module is the pressurized part of the Orion spacecraft, 
+sometimes referred to as the capsule, where crew will live and 
+work on their journey to the Moon and back. The crew module can 
+accommodate four crew members for up to 21 days, and provides a 
+safe habitat through launch, on-orbit operations, landing, and 
+recovery.
