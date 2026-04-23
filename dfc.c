@@ -297,8 +297,6 @@ int connect_to_server(char *server_address, int server_port, int timeout_sec) {
         close(sockfd);
         return -1;
     }
-    
-    memset(&server_addr, 0, sizeof(server_addr));
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
