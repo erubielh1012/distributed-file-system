@@ -10,7 +10,6 @@
 #include <dirent.h>
 
 #define MAX_MESSAGE_SIZE 1024
-#define DIRECTORY_PATH "dfs1"
 
 int send_error_message(int client_socket, char *message);
 int parse_packet(const char *packet, int packet_bytes, char *method, char *filename, int *chunk, int *size);
@@ -144,7 +143,7 @@ int main(int argc, char *argv[]) {
 
             // STEP 2: Create a file for the chunk
             char filename_with_chunk[256];
-            snprintf(filename_with_chunk, sizeof(filename_with_chunk), "%s/%s.%d", DIRECTORY_PATH, filename, chunk);
+            snprintf(filename_with_chunk, sizeof(filename_with_chunk), "%s/%s.%d", directory, filename, chunk);
             FILE *file = fopen(filename_with_chunk, "wb");
             if (file == NULL) {
                 printf("Error: could not create file\n");
@@ -152,20 +151,38 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             printf("CHKPT 2: filename_with_chunk: %s\n", filename_with_chunk);
+            
             // STEP 3: Start putting in the data from client
             int bytes_written = 0;
-            ssize_t bytes_read = 0;
-            while ((bytes_read = read(client_socket, buffer, sizeof(buffer))) > 0) {
-                if (bytes_written >= size) {
-                    send_error_message(client_socket, "Error: file is too large");
-                    continue;
+            char *header_end = strstr(buffer, "\r\n\r\n");
+            if (header_end != NULL) {
+                char *payload_start = header_end + 4;
+                int header_bytes = (int)(payload_start - buffer);
+                int payload_bytes = (int)bytes_read - header_bytes;
+                if (payload_bytes > 0) {
+                    int to_write = payload_bytes > size ? size : payload_bytes;
+                    fwrite(payload_start, 1, to_write, file);
+                    bytes_written += to_write;
                 }
-                fwrite(buffer, 1, bytes_read, file);
-                bytes_written += bytes_read;
+            }
+
+            while (bytes_written < size) {
+                ssize_t chunk_bytes = read(client_socket, buffer, sizeof(buffer));
+                if (chunk_bytes <= 0) {
+                    break;
+                }
+                int remaining = size - bytes_written;
+                int to_write = chunk_bytes > remaining ? remaining : (int)chunk_bytes;
+                fwrite(buffer, 1, to_write, file);
+                bytes_written += to_write;
             }
             printf("CHKPT 3: bytes_written: %d\n", bytes_written);
             fclose(file);
-            printf("File %s uploaded successfully\n", filename);
+            if (bytes_written != size) {
+                printf("Error: incomplete upload for %s (expected %d bytes, got %d)\n", filename, size, bytes_written);
+            } else {
+                printf("File %s uploaded successfully\n", filename);
+            }
         } else if (strcmp(method, "LIST") == 0) {
             // STEP 1: Retreive a list of files stored on the server
             // STEP 2: Send the list of files to the client
