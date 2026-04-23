@@ -183,8 +183,10 @@ int main(int argc, char *argv[]) {
                 exit(1);
             }
             size_t file_size = st.st_size;
-            int chunk_size = ceil(file_size / NUM_CHUNKS);
+            int div = file_size / NUM_CHUNKS;
+            int chunk_size = (int)ceil(div);
             int chunk_number = 0;
+            printf("Filename: %s, File size: %zu, Chunk size: %d\n", filename, file_size, chunk_size);
             FILE *file = fopen(filename, "rb");
             if (file == NULL) {
                 fprintf(stderr, "Error: Could not open %s\n", filename);
@@ -194,6 +196,7 @@ int main(int argc, char *argv[]) {
                 int server1, server2;
                 // STEP 6: Upload each pair to DFS server based on modular arithmetic (x = HASH(filename) % y)
                 servers_to_send_chunk(&server1, &server2, x, chunk_number);
+                printf("Chunk number: %d, Server 1: %d (active? %d), Server 2: %d (active? %d)\n", chunk_number, server1, server_active[server1] != -1, server2, server_active[server2] != -1);
                 // STEP 7: Upload the chunk to the servers
                 if (server_active[server1] != -1) {
                     send_packet(server_active[server1], "PUT", filename, chunk_number, chunk_size);
