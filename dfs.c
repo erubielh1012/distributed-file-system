@@ -10,6 +10,7 @@
 #include <dirent.h>
 
 #define MAX_MESSAGE_SIZE 1024
+#define DIRECTORY_PATH "dfs1"
 
 int send_error_message(int client_socket, char *message);
 int parse_packet(const char *packet, int packet_bytes, char *method, char *filename, int *chunk, int *size);
@@ -143,7 +144,7 @@ int main(int argc, char *argv[]) {
 
             // STEP 2: Create a file for the chunk
             char filename_with_chunk[256];
-            snprintf(filename_with_chunk, sizeof(filename_with_chunk), "%s.%d", filename, chunk);
+            snprintf(filename_with_chunk, sizeof(filename_with_chunk), "%s/%s.%d", DIRECTORY_PATH, filename, chunk);
             FILE *file = fopen(filename_with_chunk, "wb");
             if (file == NULL) {
                 printf("Error: could not create file\n");
