@@ -297,15 +297,13 @@ int connect_to_server(char *server_address, int server_port, int timeout_sec) {
         close(sockfd);
         return -1;
     }
-    
-    memset(&server_addr, 0, sizeof(server_addr));
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(server_port);
     server_addr.sin_addr.s_addr = inet_addr(server_address);
 
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_address)) == -1) {
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         perror("connect");
         close(sockfd);
         return -1;
