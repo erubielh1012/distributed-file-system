@@ -337,7 +337,7 @@ int download_chunks(int server_active[NUM_SERVERS], int chunks_downloaded[NUM_CH
             // STEP 2: open a temp. file to store the file chunk
             char temp_filename[256];
             // name of file: filename.[chunk_number]
-            sprintf(temp_filename, "%s.%d", filename, chunk);
+            snprintf(temp_filename, sizeof(temp_filename), "%s.%d", filename, chunk);
             FILE *temp_file = fopen(temp_filename, "wb");
             if (temp_file == NULL) {
                 perror("fopen");
