@@ -4,8 +4,8 @@
 ./dfs ./dfs4 10004 & \
 wait
 Server listening on port 10001
-Server listening on port 10004
 Server listening on port 10003
+Server listening on port 10004
 Server listening on port 10002
 Client connected
 Client connected
@@ -14,45 +14,47 @@ Client connected
 Received message: method: PUT
 filename: test.txt
 chunk: 0
-size: 83
+size: 84
+
+
+CHKPT 1
+Received message: method: PUT
+filename: test.txt
+chunk: 0
+size: 84
 
 
 CHKPT 1
 CHKPT 2: filename_with_chunk: ./dfs4/test.txt.0
-CHKPT 3: bytes_written: 83
+CHKPT 3: bytes_written: 84
 File test.txt uploaded successfully
-Received message: method: PUT
-filename: test.txt
-chunk: 0
-size: 83
-
-method: PUT
-filename: test.txt
-chunk: 1
-size: 83
-
-
-CHKPT 1
 CHKPT 2: filename_with_chunk: ./dfs1/test.txt.0
-Received message: method: PUT
-filename: test.txt
-chunk: 1
-size: 83
-
-
-CHKPT 1
-CHKPT 2: filename_with_chunk: ./dfs2/test.txt.1
-CHKPT 3: bytes_written: 55
-Error: incomplete upload for test.txt (expected 83 bytes, got 55)
 Received message: method: PUT
 filename: test.txt
 chunk: 2
 size: 83
 
 
-CHKPT 3: bytes_written: 55
 CHKPT 1
 CHKPT 2: filename_with_chunk: ./dfs3/test.txt.2
-CHKPT 3: bytes_written: 55
-Error: incomplete upload for test.txt (expected 83 bytes, got 55)
-Error: incomplete upload for test.txt (expected 83 bytes, got 55)
+CHKPT 3: bytes_written: 84
+File test.txt uploaded successfully
+CHKPT 3: bytes_written: 83
+File test.txt uploaded successfully
+Received message: method: PUT
+filename: test.txt
+chunk: 1
+size: 83
+
+ to as the capsule, where crew will live and 
+work on their journey to the Moon andmethod: PUT
+filename: test.txt
+chunk: 2
+size: 83
+
+ back. The crew module can 
+accommodate four crew members for up to 21 days, and pr
+CHKPT 1
+CHKPT 2: filename_with_chunk: ./dfs2/test.txt.1
+CHKPT 3: bytes_written: 83
+File test.txt uploaded successfully
