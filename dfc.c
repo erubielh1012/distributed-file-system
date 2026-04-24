@@ -183,10 +183,10 @@ int main(int argc, char *argv[]) {
                 exit(1);
             }
             size_t file_size = st.st_size;
-            double div = file_size / NUM_CHUNKS;
-            int chunk_size = ceil(div);
+            int base_chunk_size = (int)(file_size / NUM_CHUNKS);
+            int remainder = (int)(file_size % NUM_CHUNKS);
             int chunk_number = 0;
-            printf("Filename: %s, File size: %zu, Chunk size: %d\n", filename, file_size, chunk_size);
+            printf("Filename: %s, File size: %zu\n", filename, file_size);
             FILE *file = fopen(filename, "rb");
             if (file == NULL) {
                 fprintf(stderr, "Error: Could not open %s\n", filename);
@@ -194,43 +194,61 @@ int main(int argc, char *argv[]) {
             }
             while (chunk_number < NUM_CHUNKS) {
                 int server1, server2;
+                int current_chunk_size = base_chunk_size + (chunk_number < remainder ? 1 : 0);
+                char chunk_data[MAX_MESSAGE_SIZE];
+
                 // STEP 6: Upload each pair to DFS server based on modular arithmetic (x = HASH(filename) % y)
                 servers_to_send_chunk(&server1, &server2, x, chunk_number);
-                printf("Chunk number: %d, Server 1: %d (active? %d), Server 2: %d (active? %d)\n", chunk_number, server1, server_active[server1] != -1, server2, server_active[server2] != -1);
+                printf("Chunk number: %d, Size: %d, Server 1: %d (active? %d), Server 2: %d (active? %d)\n",
+                    chunk_number, current_chunk_size, server1, server_active[server1] != -1, server2, server_active[server2] != -1);
+
+                if (current_chunk_size > (int)sizeof(chunk_data)) {
+                    fprintf(stderr, "Error: Chunk size %d exceeds buffer\n", current_chunk_size);
+                    fclose(file);
+                    exit(1);
+                }
+
+                size_t bytes_read = fread(chunk_data, 1, current_chunk_size, file);
+                if ((int)bytes_read != current_chunk_size) {
+                    fprintf(stderr, "Error: Failed to read chunk %d from file\n", chunk_number);
+                    fclose(file);
+                    exit(1);
+                }
+
                 // STEP 7: Upload the chunk to the servers
                 if (server_active[server1] != -1) {
-                    send_packet(server_active[server1], "PUT", filename, chunk_number, chunk_size);
-                    char buffer[MAX_MESSAGE_SIZE];
+                    send_packet(server_active[server1], "PUT", filename, chunk_number, current_chunk_size);
                     int bytes_sent = 0;
-                    while (bytes_sent < chunk_size) {
-                        ssize_t bytes_read = fread(buffer, 1, sizeof(buffer), file);
-                        if (bytes_read > 0) {
-                            send(server_active[server1], buffer, bytes_read, 0);
-                            bytes_sent += bytes_read;
-                        } else {
-                            break;
+                    while (bytes_sent < current_chunk_size) {
+                        ssize_t sent = send(server_active[server1], chunk_data + bytes_sent, current_chunk_size - bytes_sent, 0);
+                        if (sent <= 0) {
+                            fprintf(stderr, "Error: Failed to send chunk %d to server %d\n", chunk_number, server1);
+                            fclose(file);
+                            exit(1);
                         }
+                        bytes_sent += (int)sent;
                     }
                 } else {
                     fprintf(stderr, "Error: Server %s is not available\n", server_name);
+                    fclose(file);
                     exit(1);
                 }
                 // may have to send a done message to the server
                 if (server_active[server2] != -1) {
-                    send_packet(server_active[server2], "PUT", filename, chunk_number, chunk_size);
-                    char buffer[MAX_MESSAGE_SIZE];
+                    send_packet(server_active[server2], "PUT", filename, chunk_number, current_chunk_size);
                     int bytes_sent = 0;
-                    while (bytes_sent < chunk_size) {
-                        ssize_t bytes_read = fread(buffer, 1, sizeof(buffer), file);
-                        if (bytes_read > 0) {
-                            send(server_active[server2], buffer, bytes_read, 0);
-                            bytes_sent += bytes_read;
-                        } else {
-                            break;
+                    while (bytes_sent < current_chunk_size) {
+                        ssize_t sent = send(server_active[server2], chunk_data + bytes_sent, current_chunk_size - bytes_sent, 0);
+                        if (sent <= 0) {
+                            fprintf(stderr, "Error: Failed to send chunk %d to server %d\n", chunk_number, server2);
+                            fclose(file);
+                            exit(1);
                         }
+                        bytes_sent += (int)sent;
                     }
                 } else {
                     fprintf(stderr, "Error: Server %s is not available\n", server_name);
+                    fclose(file);
                     exit(1);
                 }
                 chunk_number++;
