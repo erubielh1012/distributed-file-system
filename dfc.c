@@ -228,6 +228,7 @@ int main(int argc, char *argv[]) {
                         }
                         bytes_sent += (int)sent;
                     }
+                    printf("sent packet 1 for chunk %d\n", chunk_number, );
                 } else {
                     fprintf(stderr, "Error: Server %s is not available\n", server_name);
                     fclose(file);
@@ -246,6 +247,7 @@ int main(int argc, char *argv[]) {
                         }
                         bytes_sent += (int)sent;
                     }
+                    printf("sent packet 1 for chunk %d\n", chunk_number, );
                 } else {
                     fprintf(stderr, "Error: Server %s is not available\n", server_name);
                     fclose(file);
