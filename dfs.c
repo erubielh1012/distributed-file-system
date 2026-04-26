@@ -102,7 +102,9 @@ int main(int argc, char *argv[]) {
             }
 
             for (int i = 0; i < 2; i++) {
-                int fd = open(filename, O_RDONLY);
+                char path[256];
+                snprintf(path, sizeof(path), "%s/%s", directory, filenames[i]);
+                int fd = open(path, O_RDONLY);
 
                 // STEP 2B: If file is inaccessible, send error message to client
                 if (fd == -1) {
@@ -111,7 +113,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 struct stat st;
-                if (stat(filenames[i], &st) != 0) {
+                if (stat(path, &st) != 0) {
                     send_error_message(client_socket, "Error: file is inaccessible");
                     continue;
                 }
@@ -151,7 +153,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             printf("CHKPT 2: filename_with_chunk: %s\n", filename_with_chunk);
-            
+
             // STEP 3: Start putting in the data from client
             int bytes_written = 0;
             char *header_end = strstr(buffer, "\r\n\r\n");
@@ -267,7 +269,7 @@ int get_filenames_from_directory(char *directory, char *filename, char filenames
         if (strncmp(entry->d_name, filename, filename_len) == 0 && entry->d_name[filename_len] == '.') {
             strcpy(filenames[i], entry->d_name);
             i++;
-            if (i == 1) {
+            if (i == 2) {
                 closedir(dir);
                 return 1;
             }

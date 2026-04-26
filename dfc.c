@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
             memset(server_name, 0, sizeof(server_name));
             memset(server_port, 0, sizeof(server_port));
 
-            char *line = NULL;
+            char line[256];
 
             fgets(line, sizeof(line), fd);
             char temp[256];
@@ -195,7 +195,11 @@ int main(int argc, char *argv[]) {
             while (chunk_number < NUM_CHUNKS) {
                 int server1, server2;
                 int current_chunk_size = base_chunk_size + (chunk_number < remainder ? 1 : 0);
-                char chunk_data[MAX_MESSAGE_SIZE];
+                char *chunk_data = malloc(current_chunk_size);
+                if (chunk_data == NULL) {
+                    perror("malloc");
+                    exit(1);
+                }
 
                 // STEP 6: Upload each pair to DFS server based on modular arithmetic (x = HASH(filename) % y)
                 servers_to_send_chunk(&server1, &server2, x, chunk_number);
@@ -254,6 +258,7 @@ int main(int argc, char *argv[]) {
                     exit(1);
                 }
                 chunk_number++;
+                free(chunk_data);
             }
             fclose(file);
             printf("File %s uploaded successfully\n", filename);
@@ -396,10 +401,16 @@ int download_chunks(int server_active[NUM_SERVERS], int chunks_downloaded[NUM_CH
             }
             // STEP 3: Receive the file chunks and store in temp. files
             memset(buffer, 0, sizeof(buffer));
-            while (1) {
-                bytes_read = recv(sockfd, buffer, sizeof(buffer), 0);
+            int bytes_written = 0;
+            while (bytes_written < size) {
+                int remaining = size - bytes_written;
+                int to_read = remaining < MAX_MESSAGE_SIZE ? remaining : MAX_MESSAGE_SIZE;
+                
+                bytes_read = recv(sockfd, buffer, to_read, 0);
+                
                 if (bytes_read > 0) {
                     fwrite(buffer, 1, bytes_read, temp_file);
+                    bytes_written += bytes_read;
                 } else {
                     break;
                 }
