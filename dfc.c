@@ -206,12 +206,6 @@ int main(int argc, char *argv[]) {
                 printf("Chunk number: %d, Size: %d, Server 1: %d (active? %d), Server 2: %d (active? %d)\n",
                     chunk_number, current_chunk_size, server1, server_active[server1] != -1, server2, server_active[server2] != -1);
 
-                if (current_chunk_size > (int)sizeof(chunk_data)) {
-                    fprintf(stderr, "Error: Chunk size %d exceeds buffer\n", current_chunk_size);
-                    fclose(file);
-                    exit(1);
-                }
-
                 size_t bytes_read = fread(chunk_data, 1, current_chunk_size, file);
                 if ((int)bytes_read != current_chunk_size) {
                     fprintf(stderr, "Error: Failed to read chunk %d from file\n", chunk_number);
