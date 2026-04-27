@@ -31,6 +31,7 @@ int parse_packet(const char *packet, int packet_bytes, char *method, char *filen
 void servers_to_send_chunk(int *server1, int *server2, int x, int chunk_number);
 int upload_chunk_to_server(char *server_address, int server_port, char *filename, int chunk_number, char *chunk_data, int current_chunk_size);
 int list_files(char server_addresses[NUM_SERVERS][256], int server_ports[NUM_SERVERS]);
+char *based_filename(char *path);
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {
@@ -176,8 +177,9 @@ int main(int argc, char *argv[]) {
         }
         fclose(fd);
 
+        char *base_filename = based_filename(filename);
         // STEP 4: Generate a hash from filename (use MD5 hash)
-        MD5((unsigned char*)filename, strlen(filename), digest);
+        MD5((unsigned char*)base_filename, strlen(base_filename), digest);
         int hash = digest[0] % NUM_SERVERS;
         int x = hash % NUM_SERVERS;
         // STEP 5: Split the file into 4 chunks
@@ -190,10 +192,10 @@ int main(int argc, char *argv[]) {
         int base_chunk_size = (int)(file_size / NUM_CHUNKS);
         int remainder = (int)(file_size % NUM_CHUNKS);
         int chunk_number = 0;
-        printf("Filename: %s, File size: %zu\n", filename, file_size);
+        printf("Filename: %s, File size: %zu\n", base_filename, file_size);
         FILE *file = fopen(filename, "rb");
         if (file == NULL) {
-            fprintf(stderr, "Error: Could not open %s\n", filename);
+            fprintf(stderr, "Error: Could not open %s\n", base_filename);
             exit(1);
         }
         while (chunk_number < NUM_CHUNKS) {
@@ -222,10 +224,10 @@ int main(int argc, char *argv[]) {
 
 
             // STEP 7: Upload the chunk to the servers
-            int result1 = upload_chunk_to_server(server_addresses[server1], server_ports[server1], filename, chunk_number, chunk_data, current_chunk_size);
+            int result1 = upload_chunk_to_server(server_addresses[server1], server_ports[server1], base_filename, chunk_number, chunk_data, current_chunk_size);
             
             // may have to send a done message to the server
-            int result2 = upload_chunk_to_server(server_addresses[server2], server_ports[server2], filename, chunk_number, chunk_data, current_chunk_size);
+            int result2 = upload_chunk_to_server(server_addresses[server2], server_ports[server2], base_filename, chunk_number, chunk_data, current_chunk_size);
             
             
             if (result1 == -1 && result2 == -1) {
@@ -241,7 +243,7 @@ int main(int argc, char *argv[]) {
             chunk_number++;
         }
         fclose(file);
-        printf("File %s uploaded successfully\n", filename);
+        printf("File %s uploaded successfully\n", base_filename);
 
         /* 
         Outgoing packet structure:
@@ -654,4 +656,12 @@ int list_files(char server_addresses[NUM_SERVERS][256], int server_ports[NUM_SER
         }
     }
     return 0;
+}
+
+char *based_filename(char *path) {
+    char *slash = strrchr(path, '/');
+    if (slash != NULL) {
+        return slash + 1;
+    }
+    return path;
 }
