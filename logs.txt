@@ -1,77 +1,56 @@
-./dfs ./dfs1 10001 & \
-./dfs ./dfs2 10002 & \
-./dfs ./dfs3 10003 & \
-./dfs ./dfs4 10004 & \
-wait
-Server listening on port 10001
-Server listening on port 10002
-Server listening on port 10003
-Server listening on port 10004
 Client connected
 Client connected
 Client connected
 Client connected
-Received message: method: PUT
+Error: invalid packet
+Error: invalid packet
+Client connected
+Received message: method: GET
 filename: test.txt
 chunk: 0
-size: 84
+size: 0
 
-The crew module is the pressurized part of the Orion spacecraft, 
-sometimes referred
-CHKPT 1
-CHKPT 2: filename_with_chunk: ./dfs4/test.txt.0
-CHKPT 3: bytes_written: 84
-File test.txt uploaded successfully
-Received message: method: PUT
-filename: test.txt
-chunk: 1
-size: 83
 
- to as the capsule, where crew will live and 
-work on their journey to the Moon andmethod: PUT
-filename: test.txt
-chunk: 2
-size: 83
-
- back. The crew module can 
-accommodate four crew members for up to 21 days, and pr
-CHKPT 1
-CHKPT 2: filename_with_chunk: ./dfs2/test.txt.1
-CHKPT 3: bytes_written: 83
-Received message: method: PUT
-filename: test.txt
-chunk: 2
-size: 83
-
- back. The crew module can 
-accommodate four crew members for up to 21 days, and prmethod: PUT
-filename: test.txt
-chunk: 3
-size: 83
-
-ovides a 
-safe habitat through launch, on-orbit operations, landing, and 
-recovery.
-CHKPT 1
-CHKPT 2: filename_with_chunk: ./dfs3/test.txt.2
-CHKPT 3: bytes_written: 83
-File test.txt uploaded successfully
-File test.txt uploaded successfully
-Received message: method: PUT
+Error: invalid packet
+Client connected
+Received message: method: GET
 filename: test.txt
 chunk: 0
-size: 84
+size: 0
 
-The crew module is the pressurized part of the Orion spacecraft, 
-sometimes referredmethod: PUT
+
+Error: invalid packet
+Client connected
+Received message: method: GET
+filename: test.txt
+chunk: 0
+size: 0
+
+
+Client connected
+Received message: method: GET
 filename: test.txt
 chunk: 1
-size: 83
+size: 0
 
- to as the capsule, where crew will live and 
-work on their journey to the Moon and
-CHKPT 1
-CHKPT 2: filename_with_chunk: ./dfs1/test.txt.0
-CHKPT 3: bytes_written: 84
-File test.txt uploaded successfully
-s
+
+Client connected
+Received message: method: GET
+filename: test.txt
+chunk: 2
+size: 0
+
+
+Client connected
+Received message: method: GET
+filename: test.txt
+chunk: 0
+size: 0
+
+
+Client connected
+Received message: method: GET
+filename: test.txt
+chunk: 1
+size: 0
+
