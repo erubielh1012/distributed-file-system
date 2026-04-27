@@ -16,6 +16,12 @@
 #define SERVER_LIST "dfc.conf"
 #define TIMEOUT_SEC 1
 
+typedef struct {
+    char filename[256];
+    int chunks[NUM_CHUNKS];
+} FileEntry;
+
+
 int connect_to_server(char *server_address, int server_port, int timeout_sec);
 int send_packet(int sockfd, char *method, char *filename, int chunk, int size);
 int enough_servers_available(int *server_active);
@@ -24,6 +30,7 @@ int download_one_chunk(int sockfd, char *filename, int request_chunk);
 int parse_packet(const char *packet, int packet_bytes, char *method, char *filename, int *chunk, int *size);
 void servers_to_send_chunk(int *server1, int *server2, int x, int chunk_number);
 int upload_chunk_to_server(char *server_address, int server_port, char *filename, int chunk_number, char *chunk_data, int current_chunk_size);
+int list_files(char server_addresses[NUM_SERVERS][256], int server_ports[NUM_SERVERS]);
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {
@@ -251,13 +258,43 @@ int main(int argc, char *argv[]) {
     else if (strcmp(command, "list") == 0) {
         // LIST command: list all files stored across DFS servers
         
-        // STEP 1: Read dfc.conf file to get the list of DFS servers
-        // STEP 2: Check if files are incomplete: if two neighboring servers are not available, then the file is incomplete
-        // STEP 2: Connect to ONE DFS server (any file that has been previously stored is known to all servers)
-        // STEP 3: Send a LIST request to the server
-        // STEP 3: Retreive a list of files stored on the server
-        // STEP 4: Check a vaild connection to the rest of the servers (if any server is not responding, then it is not available)
+        // STEP 1: Read dfc.conf
+        FILE *fd = fopen(SERVER_LIST, "r");
 
+        if (fd == NULL) {
+            fprintf(stderr, "Error: Could not open %s\n", SERVER_LIST);
+            exit(1);
+        }
+        // STEP 2: Connect to each DFS server
+        for (int i = 0; i < NUM_SERVERS; i++) {
+            char line[256];
+            char temp[256];
+            
+            if (fgets(line, sizeof(line), fd) == NULL) {
+                fprintf(stderr, "Error: Could not read line from %s\n", SERVER_LIST);
+                exit(1);
+            }
+            
+            sscanf(line, "server %255s %255s", server_name, temp);
+            
+            char *pos = strstr(temp, ":");
+            
+            if (pos == NULL) {
+                fprintf(stderr, "Error: Could not find colon in line: %s\n", line);
+                exit(1);
+            }
+            
+            *pos = '\0';
+            
+            strcpy(server_addresses[i], temp);
+            server_ports[i] = atoi(pos + 1);
+        }
+        
+        fclose(fd);
+        
+        // STEP 3: Send a LIST request
+        list_files(server_addresses, server_ports);
+        
         /* 
         Outgoing packet structure:
             LIST\r\n
@@ -532,5 +569,89 @@ int upload_chunk_to_server(char *server_address, int server_port, char *filename
         bytes_sent += (int)sent;
     }
     close(sockfd);
+    return 0;
+}
+
+int list_files(char server_addresses[NUM_SERVERS][256], int server_ports[NUM_SERVERS]) {
+    FileEntry files[256];
+    int file_count = 0;
+
+    for (int server = 0; server < NUM_SERVERS; server++) {
+        int sockfd = connect_to_server(server_addresses[server], server_ports[server], TIMEOUT_SEC);
+        
+        if (sockfd == -1) {
+            fprintf(stderr, "Warning: Could not connect to DFS%d\n", server+1);
+            continue;
+        }
+
+        if (send_packet(sockfd, "LIST", "none", 0, 0) == -1) {
+            close(sockfd);
+            continue;
+        }
+        
+        char buffer[MAX_MESSAGE_SIZE+1];
+        ssize_t bytes_read;
+
+        while ((bytes_read = recv(sockfd, buffer, MAX_MESSAGE_SIZE, 0)) > 0) {
+            buffer[bytes_read] = '\0';
+
+            char *line = strtok(buffer, "\n");
+
+            while (line != NULL) {
+                char chunk_name[256];
+                strncpy(chunk_name, line, sizeof(chunk_name) - 1);
+                chunk_name[sizeof(chunk_name) - 1] = '\0';
+
+                char *last_dot = strrchr(chunk_name, '.');
+
+                if (last_dot != NULL) {
+                    int chunk_num = atoi(last_dot + 1);
+                    if (chunk_num >= 0 && chunk_num < NUM_CHUNKS) {
+                        *last_dot = '\0';
+
+                        int found = -1;
+                        for (int i = 0; i < file_count; i++) {
+                            if (strcmp(files[i].filename, chunk_name) == 0) {
+                                found = i;
+                                break;
+                            }
+                        }
+
+                        if (found == -1) {
+                            found = file_count;
+                            strcpy(files[file_count].filename, chunk_name);
+
+                            for (int j = 0; j < NUM_CHUNKS; j++) {
+                                files[file_count].chunks[j] = 0;
+                            }
+
+                            file_count++;
+                        }
+
+                        files[found].chunks[chunk_num] = 1;
+                    }
+                }
+                line = strtok(NULL, "\n");
+            }
+        }
+        close(sockfd);
+    }
+
+    for (int i = 0; i < file_count; i++) {
+        int complete = 1;
+
+        for (int j = 0; j < NUM_CHUNKS; j++) {
+            if (files[i].chunks[j] == 0) {
+                complete = 0;
+                break;
+            }
+        }
+
+        if (complete) {
+            printf("%s\n", files[i].filename);
+        } else {
+            printf("%s [incomplete]\n", files[i].filename);
+        }
+    }
     return 0;
 }

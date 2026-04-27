@@ -212,6 +212,36 @@ int main(int argc, char *argv[]) {
             continue;
         } else if (strcmp(method, "LIST") == 0) {
             // STEP 1: Retreive a list of files stored on the server
+            DIR *dir = opendir(directory);
+
+            if (dir == NULL) {
+                printf("Error: could not open directory\n");
+                send_error_message(client_socket, "Error: could not open directory");
+                close(client_socket);
+                continue;
+            }
+
+            struct dirent *entry;
+            char list_buffer[MAX_MESSAGE_SIZE];
+            memset(list_buffer, 0, sizeof(list_buffer));
+
+            while ((entry = readdir(dir)) != NULL) {
+                if (entry->d_name[0] == '.') {
+                    continue;
+                }
+                if (strlen(list_buffer) + strlen(entry->d_name) + 2 > sizeof(list_buffer)) {
+                    send(client_socket, list_buffer, strlen(list_buffer), 0);
+                    memset(list_buffer, 0, sizeof(list_buffer));
+                }
+                strcat(list_buffer, entry->d_name);
+                strcat(list_buffer, "\n");
+            }
+            if (strlen(list_buffer) > 0) {
+                send(client_socket, list_buffer, strlen(list_buffer), 0);
+            }
+            closedir(dir);
+            close(client_socket);
+            continue;
             // STEP 2: Send the list of files to the client
         } else {
             // Send error message to client
