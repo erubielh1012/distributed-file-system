@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 
         // Check method of request
         if (strcmp(method, "GET") == 0) {
-            printf("\nGET request received: filename: %s, chunk: %d\n\n", filename, chunk);
+            printf("\nGET request received: filename: %s, chunk: %d\n", filename, chunk);
             // STEP 1: Check if filename is valid
             if (filename[0] == '\0') {
                 printf("Error: filename is NULL\n");
@@ -125,22 +125,23 @@ int main(int argc, char *argv[]) {
                 close(fd);
                 continue;
             }
-
+            printf("File exists and is accessible\n");
             int file_size = (int)st.st_size;
 
-            // STEP 4: send the file to the client
+            printf("Sending OK packet to client\n");
             send_packet(client_socket, "OK", filename, chunk, file_size);
 
             // STEP 5: read the file and send it to the client
             char file_buffer[MAX_MESSAGE_SIZE];
             ssize_t n;
-
+            printf("Reading file and sending to client\n");
             while ((n = read(fd, file_buffer, sizeof(file_buffer))) > 0) {
                 int sent_total = 0;
                 
                 while (sent_total < n) {
                     ssize_t sent = send(client_socket, file_buffer + sent_total, n - sent_total, 0);
                     if (sent <= 0) {
+                        printf("Error: Failed to send file to client\n");
                         perror("send");
                         break;
                     }
