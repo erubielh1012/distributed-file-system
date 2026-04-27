@@ -81,6 +81,12 @@ int main(int argc, char *argv[]) {
             printf("Received message: %s\n", buffer);
         }
 
+        if (bytes_read <= 0) {
+            printf("Error: Empty request\n");
+            close(client_socket);
+            continue;
+        }
+
         // parse the request into method and filename
         if (parse_packet(buffer, bytes_read, method, filename, &chunk, &size) == -1) {
             printf("Error: invalid packet\n");
@@ -122,7 +128,7 @@ int main(int argc, char *argv[]) {
             int file_size = (int)st.st_size;
 
             // STEP 4: send the file to the client
-            send_packet(client_socket, "200 OK", filename, chunk, file_size);
+            send_packet(client_socket, "OK", filename, chunk, file_size);
 
             // STEP 5: read the file and send it to the client
             char file_buffer[MAX_MESSAGE_SIZE];

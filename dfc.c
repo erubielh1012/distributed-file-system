@@ -379,7 +379,7 @@ int download_one_chunk(int sockfd, char *filename, int request_chunk) {
         return -1;
     }
 
-    if (strcmp(method, "200 OK") != 0) {
+    if (strcmp(method, "OK") != 0) {
         return -1;
     }
 
