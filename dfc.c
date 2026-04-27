@@ -97,13 +97,13 @@ int main(int argc, char *argv[]) {
         if (enough_servers_available(server_active)) {
             // STEP 3: For each available server, download the file chunks and store in temp. files. make sure to track which chunks are downloaded.
             if (download_chunks(server_addresses, server_ports, chunks_downloaded, filename) == -1) {
-                fprintf(stderr, "Error: Failed to download file chunks. Cannot reconstruct.\n");
+                fprintf(stderr, "%s is incomplete\n", filename);
                 exit(1);
             }
             // STEP 4: Check if all 4 chunks are downloaded. if not, print an error message and exit.
             for (int i = 0; i < NUM_CHUNKS; i++) {
                 if (chunks_downloaded[i] == 0) {
-                    fprintf(stderr, "Error: File is incomplete. Cannot reconstruct\n");
+                    fprintf(stderr, "%s is incomplete\n", filename);
                     exit(1);
                 }
             }
@@ -138,7 +138,8 @@ int main(int argc, char *argv[]) {
             printf("File %s downloaded successfully\n", filename);
             fclose(output_file);
         } else {
-            fprintf(stderr, "Error: Not enough servers are available to retrieve the file\n");
+            fprintf(stderr, "%s is incomplete\n", filename);
+            exit(1);
         }
     }
     else if (strcmp(command, "put") == 0) {
