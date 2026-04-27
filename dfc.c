@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
             // STEP 3: For each available server, download the file chunks and store in temp. files. make sure to track which chunks are downloaded.
             download_chunks(server_addresses, server_ports, chunks_downloaded, filename);
             // STEP 4: Check if all 4 chunks are downloaded. if not, print an error message and exit.
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < NUM_CHUNKS; i++) {
                 if (chunks_downloaded[i] == 0) {
                     fprintf(stderr, "Error: File is incomplete. Cannot reconstruct\n");
                     exit(1);
@@ -329,12 +329,24 @@ int enough_servers_available(int *server_active) {
 }
 
 int download_chunks(char server_addresses[NUM_SERVERS][256], int server_ports[NUM_SERVERS], int chunks_downloaded[NUM_CHUNKS], char *filename) {
+
+    unsigned char digest[MD5_DIGEST_LENGTH];
+    MD5((unsigned char *) filename, strlen(filename), digest);
+    int x = digest[0] % NUM_SERVERS;
+
     for (int chunk = 0; chunk < NUM_CHUNKS; chunk++) {
         if (chunks_downloaded[chunk] == 1) {
             continue;
         }
 
-        for (int server = 0; server < NUM_SERVERS; server++) {
+        int server1, server2;
+        servers_to_send_chunk(&server1, &server2, x, chunk);
+
+        int servers_to_download_from[2] = {server1, server2};
+        int found = 0;
+
+        for (int i = 0; i < 2; i++) {
+            int server = servers_to_download_from[i];
             int sockfd = connect_to_server(server_addresses[server], server_ports[server], TIMEOUT_SEC);
             
             if (sockfd == -1) {
@@ -346,9 +358,16 @@ int download_chunks(char server_addresses[NUM_SERVERS][256], int server_ports[NU
 
             if (result == 0) {
                 chunks_downloaded[chunk] = 1;
+                found = 1;
                 printf("Chunk %d downloaded from DFS%d\n", chunk, server+1);
                 break;
+            } else {
+                fprintf(stderr, "Error: Failed to download chunk %d from DFS%d\n", chunk, server+1);
             }
+        }
+        if (!found) {
+            fprintf(stderr, "Error: Failed to download chunk %d from any server\n", chunk);
+            return -1;
         }
     }
     return 0;
