@@ -375,7 +375,7 @@ int download_chunks(char server_addresses[NUM_SERVERS][256], int server_ports[NU
 
 int download_one_chunk(int sockfd, char *filename, int request_chunk) {
     char buffer[MAX_MESSAGE_SIZE+1];
-
+    printf("downloading chunk %d from %s\n", request_chunk, filename);
     if (send_packet(sockfd, "GET", filename, request_chunk, 0) == -1) {
         return -1;
     }
@@ -397,6 +397,8 @@ int download_one_chunk(int sockfd, char *filename, int request_chunk) {
     if (parse_packet(buffer, bytes_read, method, res_filename, &chunk, &size) == -1) {
         return -1;
     }
+
+    printf("Response: method: %s, filename: %s, chunk: %d, size: %d\n", method, res_filename, chunk, size);
 
     if (strcmp(method, "OK") != 0) {
         return -1;

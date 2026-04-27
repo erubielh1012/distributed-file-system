@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytes_read = read(client_socket, buffer, sizeof(buffer));
         if (bytes_read > 0) {
-            printf("Received message: %s\n", buffer);
+            printf("%s: received message: %s\n", directory, buffer);
         }
 
         if (bytes_read <= 0) {
@@ -97,6 +97,7 @@ int main(int argc, char *argv[]) {
 
         // Check method of request
         if (strcmp(method, "GET") == 0) {
+            printf("\nGET request received: filename: %s, chunk: %d\n\n", filename, chunk);
             // STEP 1: Check if filename is valid
             if (filename[0] == '\0') {
                 printf("Error: filename is NULL\n");
@@ -108,7 +109,7 @@ int main(int argc, char *argv[]) {
             // STEP 2: Build the path to the chunk file and open it
             char chunk_path[256];
             snprintf(chunk_path, sizeof(chunk_path), "%s/%s.%d", directory, filename, chunk);
-
+            printf("getting file: %s\n", chunk_path);
             int fd = open(chunk_path, O_RDONLY);
             if (fd == -1) {
                 send_error_message(client_socket, "Error: file is inaccessible");
