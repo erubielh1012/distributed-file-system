@@ -13,7 +13,6 @@
 
 int send_error_message(int client_socket, char *message);
 int parse_packet(const char *packet, int packet_bytes, char *method, char *filename, int *chunk, int *size);
-int get_filenames_from_directory(char *directory, char *filename, char filenames[][256]);
 int send_packet(int sockfd, char *method, char *filename, int chunk, int size);
 
 int main(int argc, char *argv[]) {
@@ -26,7 +25,6 @@ int main(int argc, char *argv[]) {
     char filename[256];
     int chunk;
     int size;
-    char filenames[2][256];
     char *directory = argv[1];
     int port = atoi(argv[2]);
 
@@ -84,7 +82,12 @@ int main(int argc, char *argv[]) {
         }
 
         // parse the request into method and filename
-        parse_packet(buffer, bytes_read, method, filename, &chunk, &size);
+        if (parse_packet(buffer, bytes_read, method, filename, &chunk, &size) == -1) {
+            printf("Error: invalid packet\n");
+            send_error_message(client_socket, "Error: invalid packet");
+            close(client_socket);
+            continue;
+        }
 
         // Check method of request
         if (strcmp(method, "GET") == 0) {
@@ -92,54 +95,63 @@ int main(int argc, char *argv[]) {
             if (filename[0] == '\0') {
                 printf("Error: filename is NULL\n");
                 send_error_message(client_socket, "Error: filename is NULL");
+                close(client_socket);
                 continue;
             }
 
-            // STEP 2: Check if file exists in directory using readdir()
-            if (!get_filenames_from_directory(directory, filename, filenames)) {
-                send_error_message(client_socket, "Error: file does not exist");
+            // STEP 2: Build the path to the chunk file and open it
+            char chunk_path[256];
+            snprintf(chunk_path, sizeof(chunk_path), "%s/%s.%d", directory, filename, chunk);
+
+            int fd = open(chunk_path, O_RDONLY);
+            if (fd == -1) {
+                send_error_message(client_socket, "Error: file is inaccessible");
+                close(client_socket);
                 continue;
             }
 
-            for (int i = 0; i < 2; i++) {
-                char path[256];
-                snprintf(path, sizeof(path), "%s/%s", directory, filenames[i]);
-                int fd = open(path, O_RDONLY);
-
-                // STEP 2B: If file is inaccessible, send error message to client
-                if (fd == -1) {
-                    send_error_message(client_socket, "Error: file is inaccessible");
-                    continue;
-                }
-
-                struct stat st;
-                if (stat(path, &st) != 0) {
-                    send_error_message(client_socket, "Error: file is inaccessible");
-                    continue;
-                }
-                size_t file_size = st.st_size;
-
-                // STEP 3: Split the filename and chunk number. Ex. foo.txt.1 -> foo.txt and 1
-                char *first = strchr(filenames[i], '.');
-                char *second = strchr(first + 1, '.');
-                *second = '\0';
-                int chunk_num = atoi(second + 1);
-    
-                // STEP 4: If file exists, send file to client
-                bzero(buffer, sizeof(buffer));
-                send_packet(client_socket, "200 OK", filenames[i], chunk_num, file_size);
-                while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0) {
-                    send(client_socket, buffer, bytes_read, 0);
-                }
+            // STEP 3: check if file exists and get file size
+            struct stat st;
+            if (stat(chunk_path, &st) != 0) {
+                send_error_message(client_socket, "Error: file is inaccessible");
+                close(client_socket);
                 close(fd);
+                continue;
             }
-        
+
+            int file_size = (int)st.st_size;
+
+            // STEP 4: send the file to the client
+            send_packet(client_socket, "200 OK", filename, chunk, file_size);
+
+            // STEP 5: read the file and send it to the client
+            char file_buffer[MAX_MESSAGE_SIZE];
+            ssize_t n;
+
+            while ((n = read(fd, file_buffer, sizeof(file_buffer))) > 0) {
+                int sent_total = 0;
+                
+                while (sent_total < n) {
+                    ssize_t sent = send(client_socket, file_buffer + sent_total, n - sent_total, 0);
+                    if (sent <= 0) {
+                        perror("send");
+                        break;
+                    }
+                    sent_total += (int)sent;
+                }
+            }
+
+            close(fd);
+            printf("File %s sent to client\n", chunk_path);
+            close(client_socket);
+            continue;
         } else if (strcmp(method, "PUT") == 0) {
             printf("CHKPT 1\n");
             // STEP 1: Read filename from request
             if (filename[0] == '\0') {
                 printf("Error: filename is NULL\n");
                 send_error_message(client_socket, "Error: filename is NULL");
+                close(client_socket);
                 continue;
             }
 
@@ -150,6 +162,7 @@ int main(int argc, char *argv[]) {
             if (file == NULL) {
                 printf("Error: could not create file\n");
                 send_error_message(client_socket, "Error: could not create file");
+                close(client_socket);
                 continue;
             }
             printf("CHKPT 2: filename_with_chunk: %s\n", filename_with_chunk);
@@ -182,9 +195,13 @@ int main(int argc, char *argv[]) {
             fclose(file);
             if (bytes_written != size) {
                 printf("Error: incomplete upload for %s (expected %d bytes, got %d)\n", filename, size, bytes_written);
+                remove(filename_with_chunk);
             } else {
-                printf("File %s uploaded successfully\n", filename);
+                printf("File %s uploaded successfully\n", filename_with_chunk);
             }
+
+            close(client_socket);
+            continue;
         } else if (strcmp(method, "LIST") == 0) {
             // STEP 1: Retreive a list of files stored on the server
             // STEP 2: Send the list of files to the client
@@ -253,29 +270,6 @@ int send_error_message(int client_socket, char *message) {
     char error_message[1024] = "404 Not Found\r\n";
     strcat(error_message, message);
     send(client_socket, error_message, strlen(error_message), 0);
-    return 0;
-}
-
-int get_filenames_from_directory(char *directory, char *filename, char filenames[][256]) {
-    DIR *dir = opendir(directory);
-    if (dir == NULL) {
-        printf("Error: directory is inaccessible\n");
-        return 0;
-    }
-    struct dirent *entry;
-    size_t filename_len = strlen(filename);
-    int i = 0;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strncmp(entry->d_name, filename, filename_len) == 0 && entry->d_name[filename_len] == '.') {
-            strcpy(filenames[i], entry->d_name);
-            i++;
-            if (i == 2) {
-                closedir(dir);
-                return 1;
-            }
-        }
-    }
-    closedir(dir);
     return 0;
 }
 
