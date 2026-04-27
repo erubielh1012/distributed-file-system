@@ -71,7 +71,12 @@ int main(int argc, char *argv[]) {
 
             // STEP 2B: Attempt to connect to the server with a 1-second timeout.
             int sockfd = connect_to_server(server_addresses[i], server_ports[i], TIMEOUT_SEC);
-            server_active[i] = sockfd;
+            if (sockfd != -1) {
+                server_active[i] = 1;
+                close(sockfd);
+            } else {
+                server_active[i] = -1;
+            }
         }
         fclose(fd);
 
@@ -83,7 +88,10 @@ int main(int argc, char *argv[]) {
         // STEP 4: If two neighboring servers are not available, unable to retrieve the file. exit with error message. [later we can change this to a tracking table]
         if (enough_servers_available(server_active)) {
             // STEP 3: For each available server, download the file chunks and store in temp. files. make sure to track which chunks are downloaded.
-            download_chunks(server_addresses, server_ports, chunks_downloaded, filename);
+            if (download_chunks(server_addresses, server_ports, chunks_downloaded, filename) == -1) {
+                fprintf(stderr, "Error: Failed to download file chunks. Cannot reconstruct.\n");
+                exit(1);
+            }
             // STEP 4: Check if all 4 chunks are downloaded. if not, print an error message and exit.
             for (int i = 0; i < NUM_CHUNKS; i++) {
                 if (chunks_downloaded[i] == 0) {
